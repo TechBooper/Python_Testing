@@ -60,6 +60,25 @@ def purchasePlaces():
     
     return render_template('welcome.html', club=club, competitions=competitions)
 
+# Update the clubs JSON file
+def updateClubs():
+    """
+    Update the 'clubs.json' file with the current state of clubs.
+    """
+    with open('clubs.json', 'w') as c:
+        json.dump(clubs, c, indent=4)
+
+# Update the competitions JSON file
+def updateCompetitions():
+    """
+    Update the 'competitions.json' file with the current state of competitions.
+    """
+    with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/competitions.json', 'w') as comps_file:
+        portalocker.lock(comps_file, portalocker.LOCK_EX)  # Exclusive lock for writing
+        json.dump({'competitions': competitions}, comps_file, indent=4)
+
+
+
 # TODO: Add route for points display
 
 # Logout route
