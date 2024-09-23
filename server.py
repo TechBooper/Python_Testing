@@ -48,17 +48,44 @@ def book(competition, club):
 # Purchase places route
 @app.route('/purchasePlaces', methods=['POST'])
 def purchasePlaces():
-    competition = [c for c in competitions if c['name'] == request.form['competition']][0]
-    club = [c for c in clubs if c['name'] == request.form['club']][0]
-    placesRequired = int(request.form['places'])
+    """
+    Route to handle the purchase of competition spots by a club.
     
-    if placesRequired <= int(competition['numberOfPlaces']):
-        competition['numberOfPlaces'] = int(competition['numberOfPlaces']) - placesRequired
-        flash('Great - booking complete!')
+    Returns:
+        Rendered template for the welcome page with a booking status message.
+    """
+    competition_name = request.form['competition'].replace("_", " ")
+    competition = [c for c in competitions if c['name'] == competition_name]
+    club = [c for c in clubs if c['name'] == request.form['club']]
+
+    if competition and club:
+        competition = competition[0]
+        club = club[0]
+        placesRequired = int(request.form['places'])
+
+        if 'bookings' not in competition:
+            competition['bookings'] = {}
+
+        alreadyBookedByClub = competition['bookings'].get(club['name'], 0)
+
+        if placesRequired + alreadyBookedByClub > 12:
+            flash('You cannot book more than 12 places in total for this competition.')
+        elif placesRequired <= int(competition['available_spots']):
+            if int(club['points']) >= placesRequired:
+                competition['available_spots'] -= placesRequired
+                club['points'] -= placesRequired
+                competition['bookings'][club['name']] = alreadyBookedByClub + placesRequired
+                updateCompetitions()
+                updateClubs()
+                flash('Great - booking complete!')
+            else:
+                flash('Not enough points.')
+        else:
+            flash('Not enough places available.')
     else:
-        flash('Not enough places available.')
+        flash("Competition or club not found.")
     
-    return render_template('welcome.html', club=club, competitions=competitions)
+    return render_template('welcome.html')
 
 # TODO: Add route for points display
 
