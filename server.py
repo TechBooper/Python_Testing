@@ -1,5 +1,6 @@
 import json
-from flask import Flask, render_template, request, redirect, flash, url_for
+from flask import Flask, render_template, request, redirect, flash, url_for # type: ignore
+import session # type: ignore
 
 # Load clubs and competitions from JSON files
 def loadClubs():
@@ -27,10 +28,19 @@ def index():
 # Summary route to display club details
 @app.route('/showSummary', methods=['POST'])
 def showSummary():
-    try:
-        club = [club for club in clubs if club['email'] == request.form['email']][0]
+    """
+    Route to show the summary of the club based on the provided email.
+    
+    Returns:
+        Rendered template of the welcome page if the club is found, or redirects to the home page if not.
+    """
+    club = [club for club in clubs if club['email'] == request.form['email']]
+    if club:
+        club = club[0]
+        session['logged_in'] = True
+        session['club'] = club['name']
         return render_template('welcome.html', club=club, competitions=competitions)
-    except IndexError:
+    else:
         flash("Email not found. Please try again.")
         return redirect(url_for('index'))
 
