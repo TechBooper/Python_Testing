@@ -60,6 +60,23 @@ def purchasePlaces():
     
     return render_template('welcome.html', club=club, competitions=competitions)
 
+
+def book_spot(user, competition, spots_requested):
+    if spots_requested > 12:
+        return "Cannot book more than 12 spots"
+    
+    if user['points'] < spots_requested:
+        return "Not enough points"
+    
+    if competition['available_spots'] < spots_requested:
+        return "Not enough available spots"
+    
+    user['points'] -= spots_requested
+    competition['available_spots'] -= spots_requested
+    
+    return "Booking successful"
+
+
 # TODO: Add route for points display
 
 # Logout route
