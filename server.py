@@ -8,8 +8,9 @@ def loadClubs():
     return listOfClubs
 
 def loadCompetitions():
-    with open('competitions.json') as comps:
-        listOfCompetitions = json.load(comps)['competitions']
+    with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/competitions.json', 'r') as comps_file:
+        portalocker.lock(comps_file, portalocker.LOCK_SH)  # Shared lock for reading
+        listOfCompetitions = json.load(comps_file)['competitions']
     return listOfCompetitions
 
 app = Flask(__name__)
