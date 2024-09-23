@@ -21,14 +21,10 @@ def loadCompetitions():
     Returns:
         list: List of competitions loaded from the JSON file.
     """
-    try:
-        with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/competitions.json', 'r') as comps_file:
-            portalocker.lock(comps_file, portalocker.LOCK_SH)  # Shared lock for reading
-            listOfCompetitions = json.load(comps_file)['competitions']
-        return listOfCompetitions
-    except (FileNotFoundError, json.JSONDecodeError):
-        print("Error loading competitions.json")
-        return []
+    with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/competitions.json', 'r') as comps_file:
+        portalocker.lock(comps_file, portalocker.LOCK_SH)  # Shared lock for reading
+        listOfCompetitions = json.load(comps_file)['competitions']
+    return listOfCompetitions
 
 app = Flask(__name__)
 app.secret_key = 'something_special'  # Change for security in production
@@ -57,12 +53,13 @@ def showSummary():
     Returns:
         Rendered template of the welcome page if the club is found, or redirects to the home page if not.
     """
-    try:
-        club = [club for club in clubs if club['email'] == request.form['email']][0]
+    club = [club for club in clubs if club['email'] == request.form['email']]
+    if club:
+        club = club[0]
         session['logged_in'] = True
         session['club'] = club['name']
         return render_template('welcome.html', club=club, competitions=competitions)
-    except IndexError:
+    else:
         flash("Email not found. Please try again.")
         return redirect(url_for('index'))
 
@@ -86,11 +83,12 @@ def book(competition, club):
     competition = competition.replace("_", " ")  
     club = club.replace("_", " ") 
 
-    try:
-        foundClub = [c for c in clubs if c['name'] == club][0]
-        foundCompetition = [c for c in competitions if c['name'] == competition][0]
-        return render_template('booking.html', club=foundClub, competition=foundCompetition)
-    except IndexError:
+    foundClub = [c for c in clubs if c['name'] == club]
+    foundCompetition = [c for c in competitions if c['name'] == competition]
+
+    if foundClub and foundCompetition:
+        return render_template('booking.html', club=foundClub[0], competition=foundCompetition[0])
+    else:
         flash("Club or competition not found.")
         return redirect(url_for('index'))
 
@@ -103,11 +101,13 @@ def purchasePlaces():
     Returns:
         Rendered template for the welcome page with a booking status message.
     """
-    try:
-        competition_name = request.form['competition'].replace("_", " ")
-        competition = [c for c in competitions if c['name'] == competition_name][0]
-        club = [c for c in clubs if c['name'] == request.form['club']][0]
-        
+    competition_name = request.form['competition'].replace("_", " ")
+    competition = [c for c in competitions if c['name'] == competition_name]
+    club = [c for c in clubs if c['name'] == request.form['club']]
+
+    if competition and club:
+        competition = competition[0]
+        club = club[0]
         placesRequired = int(request.form['places'])
 
         if 'bookings' not in competition:
@@ -129,10 +129,10 @@ def purchasePlaces():
                 flash('Not enough points.')
         else:
             flash('Not enough places available.')
-    except IndexError:
+    else:
         flash("Competition or club not found.")
     
-    return render_template('welcome.html', club=club, competitions=competitions)
+    return render_template('welcome.html')
 
 # Update the clubs JSON file
 def updateClubs():
@@ -147,13 +147,9 @@ def updateCompetitions():
     """
     Update the 'competitions.json' file with the current state of competitions.
     """
-    try:
-        with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/competitions.json', 'w') as comps_file:
-            portalocker.lock(comps_file, portalocker.LOCK_EX)  # Exclusive lock for writing
-            json.dump({'competitions': competitions}, comps_file, indent=4)
-            portalocker.unlock(comps_file)
-    except Exception as e:
-        print(f"Error updating competitions.json: {e}")
+    with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/competitions.json', 'w') as comps_file:
+        portalocker.lock(comps_file, portalocker.LOCK_EX)  # Exclusive lock for writing
+        json.dump({'competitions': competitions}, comps_file, indent=4)
 
 # Helper function to book spots
 def book_spot(user, competition, spots_requested):
