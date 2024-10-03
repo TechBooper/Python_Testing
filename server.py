@@ -1,6 +1,10 @@
 import json
 from flask import Flask, render_template, request, redirect, flash, url_for, session
 import portalocker
+import os
+
+# Get the current directory of the script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Load clubs and competitions from JSON files
 def loadClubs():
@@ -10,7 +14,8 @@ def loadClubs():
     Returns:
         list: List of clubs loaded from the JSON file.
     """
-    with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/clubs.json') as c:
+    clubs_path = os.path.join(BASE_DIR, 'clubs.json')
+    with open(clubs_path) as c:
         listOfClubs = json.load(c)['clubs']
     return listOfClubs
 
@@ -21,7 +26,8 @@ def loadCompetitions():
     Returns:
         list: List of competitions loaded from the JSON file.
     """
-    with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/competitions.json', 'r') as comps_file:
+    competitions_path = os.path.join(BASE_DIR, 'competitions.json')
+    with open(competitions_path, 'r') as comps_file:
         portalocker.lock(comps_file, portalocker.LOCK_SH)  # Shared lock for reading
         listOfCompetitions = json.load(comps_file)['competitions']
     return listOfCompetitions
@@ -117,7 +123,7 @@ def purchasePlaces():
 
         if placesRequired + alreadyBookedByClub > 12:
             flash('You cannot book more than 12 places in total for this competition.')
-        elif placesRequired <= int(competition['available_spots']):
+        elif placesRequired <= int(competition['available_spots']):  # Validate available spots
             if int(club['points']) >= placesRequired:
                 competition['available_spots'] -= placesRequired
                 club['points'] -= placesRequired
@@ -139,7 +145,8 @@ def updateClubs():
     """
     Update the 'clubs.json' file with the current state of clubs.
     """
-    with open('clubs.json', 'w') as c:
+    clubs_path = os.path.join(BASE_DIR, 'clubs.json')
+    with open(clubs_path, 'w') as c:
         json.dump(clubs, c, indent=4)
 
 # Update the competitions JSON file
@@ -147,7 +154,8 @@ def updateCompetitions():
     """
     Update the 'competitions.json' file with the current state of competitions.
     """
-    with open('C:/Users/Marwane/Documents/GitHub/Python_Testing/competitions.json', 'w') as comps_file:
+    competitions_path = os.path.join(BASE_DIR, 'competitions.json')
+    with open(competitions_path, 'w') as comps_file:
         portalocker.lock(comps_file, portalocker.LOCK_EX)  # Exclusive lock for writing
         json.dump({'competitions': competitions}, comps_file, indent=4)
 
