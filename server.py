@@ -37,13 +37,25 @@ def showSummary():
 # Booking route
 @app.route('/book/<competition>/<club>')
 def book(competition, club):
-    try:
-        foundClub = [c for c in clubs if c['name'] == club][0]
-        foundCompetition = [c for c in competitions if c['name'] == competition][0]
-        return render_template('booking.html', club=foundClub, competition=foundCompetition)
-    except IndexError:
-        flash("Something went wrong - please try again")
-        return render_template('welcome.html', club=club, competitions=competitions)
+    """
+    Route for booking a competition spot by the club.
+    """
+    if not session.get("logged_in"):
+        flash("You must be logged in to book.")
+        return redirect(url_for("index"))
+
+    competition = competition.replace("_", " ")
+    club = club.replace("_", " ")
+
+    foundClub = next((c for c in clubs if c["name"] == club), None)
+    foundCompetition = next((c for c in competitions if c["name"] == competition), None)
+
+    if foundClub and foundCompetition:
+        return render_template("booking.html", club=foundClub, competition=foundCompetition)
+    else:
+        flash("Club or competition not found.")
+        return redirect(url_for("index"))
+
 
 # Purchase places route
 @app.route('/purchasePlaces', methods=['POST'])
@@ -65,10 +77,6 @@ def purchasePlaces():
 # Logout route
 @app.route('/logout')
 def logout():
-    """
-    Route to handle user logout and session clearance.
-    """
-    session.clear()
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
