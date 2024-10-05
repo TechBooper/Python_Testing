@@ -65,6 +65,10 @@ def purchasePlaces():
 # Logout route
 @app.route('/logout')
 def logout():
+    """
+    Route to handle user logout and session clearance.
+    """
+    session.clear()
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
