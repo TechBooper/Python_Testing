@@ -39,6 +39,54 @@ class BookingTestCase(unittest.TestCase):
         self.assertEqual(result, "Cannot book more than 12 spots")
         self.assertEqual(user['points'], 10)  # Points should not change
         self.assertEqual(competition['available_spots'], 10)  # Spots should not change
+    
+    def test_booking_zero_spots(self):
+        """Test booking zero spots."""
+        competition = {'available_spots': 10}
+        user = {'points': 10}
+        spots_requested = 0
+
+        result = book_spot(user, competition, spots_requested)
+
+        self.assertEqual(result, "Number of spots requested must be greater than zero")
+        self.assertEqual(user['points'], 10)  # Points should not change
+        self.assertEqual(competition['available_spots'], 10)  # Spots should not change
+    
+    def test_booking_negative_spots(self):
+        """Test booking a negative number of spots."""
+        competition = {'available_spots': 10}
+        user = {'points': 10}
+        spots_requested = -3
+
+        result = book_spot(user, competition, spots_requested)
+
+        self.assertEqual(result, "Number of spots requested must be greater than zero")
+        self.assertEqual(user['points'], 10)  # Points should not change
+        self.assertEqual(competition['available_spots'], 10)  # Spots should not change
+    
+    def test_booking_non_integer_spots(self):
+        """Test booking a non-integer number of spots."""
+        competition = {'available_spots': 10}
+        user = {'points': 10}
+        spots_requested = "abc"  # Non-integer input
+
+        result = book_spot(user, competition, spots_requested)
+
+        self.assertEqual(result, "Invalid input for spots requested")
+        self.assertEqual(user['points'], 10)  # Points should not change
+        self.assertEqual(competition['available_spots'], 10)  # Spots should not change
+    
+    def test_booking_leads_to_negative_points(self):
+        """Test that booking does not reduce user's points below zero."""
+        competition = {'available_spots': 10}
+        user = {'points': 5}
+        spots_requested = 6  # User has fewer points than spots requested
+
+        result = book_spot(user, competition, spots_requested)
+
+        self.assertEqual(result, "Not enough points")
+        self.assertEqual(user['points'], 5)  # Points should not change
+        self.assertEqual(competition['available_spots'], 10)  # Spots should not change
 
 if __name__ == '__main__':
     unittest.main()

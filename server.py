@@ -16,7 +16,7 @@ def loadClubs():
     """
     clubs_path = os.path.join(BASE_DIR, 'clubs.json')
     with open(clubs_path) as c:
-        listOfClubs = json.load(c)['clubs']
+        listOfClubs = json.load(c)  # No need to access with ['clubs']
     return listOfClubs
 
 def loadCompetitions():
@@ -26,10 +26,21 @@ def loadCompetitions():
     Returns:
         list: List of competitions loaded from the JSON file.
     """
-    competitions_path = os.path.join(BASE_DIR, 'competitions.json')
+    # Get the absolute path to the competitions.json file
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    competitions_path = os.path.join(base_dir, 'competitions.json')
+    
+    # Load the competitions dictionary from the JSON file
     with open(competitions_path, 'r') as comps_file:
-        portalocker.lock(comps_file, portalocker.LOCK_SH)  # Shared lock for reading
-        listOfCompetitions = json.load(comps_file)['competitions']
+        competitions_data = json.load(comps_file)
+    
+    # Extract the list of competitions from the dictionary
+    listOfCompetitions = competitions_data.get('competitions', [])
+    
+    # Ensure that we have loaded a list of competitions
+    if not listOfCompetitions:
+        raise ValueError("Competitions data is empty or invalid.")
+    
     return listOfCompetitions
 
 app = Flask(__name__)
@@ -54,20 +65,40 @@ def index():
 @app.route('/showSummary', methods=['POST'])
 def showSummary():
     """
-    Route to show the summary of the club based on the provided email.
+    Route to show the summary of the club based on the provided email/Secretary.
     
     Returns:
         Rendered template of the welcome page if the club is found, or redirects to the home page if not.
     """
-    club = [club for club in clubs if club['email'] == request.form['email']]
+    # Load the clubs and competitions from the JSON files
+    clubs = loadClubs()
+    competitions = loadCompetitions()
+
+    # Retrieve email from the request form
+    email = request.form.get('email')
+    
+    if not email:
+        flash("Email field is required.")
+        return redirect(url_for('index'))
+
+    # Find the club based on the email provided in the form
+    club = next((club for club in clubs if club['email'] == email), None)
+    
     if club:
-        club = club[0]
+        # If the club is found, log them in and display the welcome page
         session['logged_in'] = True
-        session['club'] = club['name']
+        session['club'] = club['name']  # Alternatively, you can store the whole club
+
+        # Ensure competitions data is passed to the template
         return render_template('welcome.html', club=club, competitions=competitions)
     else:
+        # If no club is found, flash an error and redirect to the home page
         flash("Email not found. Please try again.")
         return redirect(url_for('index'))
+
+
+
+
 
 # Booking route
 @app.route('/book/<competition>/<club>')
@@ -108,37 +139,40 @@ def purchasePlaces():
         Rendered template for the welcome page with a booking status message.
     """
     competition_name = request.form['competition'].replace("_", " ")
-    competition = [c for c in competitions if c['name'] == competition_name]
-    club = [c for c in clubs if c['name'] == request.form['club']]
+    club_name = request.form['club']
 
-    if competition and club:
-        competition = competition[0]
-        club = club[0]
-        placesRequired = int(request.form['places'])
+    # Find the competition and club
+    competition = next((c for c in competitions if c['name'] == competition_name), None)
+    club = next((c for c in clubs if c['name'] == club_name), None)
 
-        if 'bookings' not in competition:
-            competition['bookings'] = {}
-
-        alreadyBookedByClub = competition['bookings'].get(club['name'], 0)
-
-        if placesRequired + alreadyBookedByClub > 12:
-            flash('You cannot book more than 12 places in total for this competition.')
-        elif placesRequired <= int(competition['available_spots']):  # Validate available spots
-            if int(club['points']) >= placesRequired:
-                competition['available_spots'] -= placesRequired
-                club['points'] -= placesRequired
-                competition['bookings'][club['name']] = alreadyBookedByClub + placesRequired
-                updateCompetitions()
-                updateClubs()
-                flash('Great - booking complete!')
-            else:
-                flash('Not enough points.')
-        else:
-            flash('Not enough places available.')
-    else:
+    if not competition or not club:
         flash("Competition or club not found.")
+        return redirect(url_for('index'))
+
+    # Attempt to convert the input to integer and handle invalid input
+    try:
+        spots_requested = int(request.form['places'])
+        if spots_requested <= 0:
+            flash('Number of spots requested must be greater than zero')
+            return render_template('welcome.html', club=club, competitions=competitions)
+    except ValueError:
+        flash('Invalid input for number of spots')
+        return render_template('welcome.html', club=club, competitions=competitions)
+
+    # Use the book_spot helper function to handle booking logic
+    booking_result = book_spot(club, competition, spots_requested)
+
+    if booking_result == "Booking successful":
+        updateCompetitions()
+        updateClubs()
+        flash('Great - booking complete!')
+    else:
+        flash(booking_result)
     
-    return render_template('welcome.html')
+    return render_template('welcome.html', club=club, competitions=competitions)
+
+
+
 
 # Update the clubs JSON file
 def updateClubs():
@@ -172,19 +206,32 @@ def book_spot(user, competition, spots_requested):
     Returns:
         str: Result of the booking attempt.
     """
+    try:
+        spots_requested = int(spots_requested)
+    except ValueError:
+        return "Invalid input for spots requested"
+
+    if spots_requested <= 0:
+        return "Number of spots requested must be greater than zero"
+
     if spots_requested > 12:
         return "Cannot book more than 12 spots"
-    
-    if user['points'] < spots_requested:
-        return "Not enough points"
-    
+
     if competition['available_spots'] < spots_requested:
         return "Not enough available spots"
-    
+
+    if user['points'] < spots_requested:
+        return "Not enough points"
+
+    # Deduct points and reduce available spots if all checks passed
     user['points'] -= spots_requested
     competition['available_spots'] -= spots_requested
-    
+
     return "Booking successful"
+
+
+
+
 
 # Route to display club points
 @app.route('/points')
