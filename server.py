@@ -137,12 +137,10 @@ def book(competition, club):
 # Purchase places route
 @app.route("/purchasePlaces", methods=["POST"])
 def purchasePlaces():
-    """
-    Route to handle the purchase of competition spots by a club.
+    # Load data within the function to avoid using global state
+    clubs = loadClubs()
+    competitions = loadCompetitions()
 
-    Returns:
-        Rendered template for the welcome page with a booking status message.
-    """
     competition_name = request.form["competition"].replace("_", " ")
     club_name = request.form["club"]
 
@@ -153,8 +151,7 @@ def purchasePlaces():
     if not competition or not club:
         flash("Competition or club not found.")
         return redirect(url_for("index"))
-
-    # Attempt to convert the input to integer and handle invalid input
+    
     try:
         spots_requested = int(request.form["places"])
         if spots_requested <= 0:
@@ -164,17 +161,17 @@ def purchasePlaces():
         flash("Invalid input for number of spots")
         return render_template("welcome.html", club=club, competitions=competitions)
 
-    # Use the book_spot helper function to handle booking logic
     booking_result = book_spot(club, competition, spots_requested)
 
     if booking_result == "Booking successful":
-        updateCompetitions()
-        updateClubs()
+        updateCompetitions(competitions)
+        updateClubs(clubs)
         flash("Great - booking complete!")
     else:
         flash(booking_result)
 
     return render_template("welcome.html", club=club, competitions=competitions)
+
 
 
 # Update the clubs JSON file
