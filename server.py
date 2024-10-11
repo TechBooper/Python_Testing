@@ -6,45 +6,24 @@ import os
 # Get the current directory of the script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
 # Load clubs and competitions from JSON files
 def loadClubs():
-    """
-    Load the list of clubs from the 'clubs.json' file.
-
-    Returns:
-        list: List of clubs loaded from the JSON file.
-    """
     clubs_path = os.path.join(BASE_DIR, "clubs.json")
     with open(clubs_path) as c:
-        listOfClubs = json.load(c)  # No need to access with ['clubs']
+        data = json.load(c)
+        listOfClubs = data.get('clubs', [])
+        if not listOfClubs:
+            raise ValueError("Clubs data is empty or invalid.")
     return listOfClubs
 
-
 def loadCompetitions():
-    """
-    Load the list of competitions from the 'competitions.json' file with a shared lock for reading.
-
-    Returns:
-        list: List of competitions loaded from the JSON file.
-    """
-    # Get the absolute path to the competitions.json file
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    competitions_path = os.path.join(base_dir, "competitions.json")
-
-    # Load the competitions dictionary from the JSON file
+    competitions_path = os.path.join(BASE_DIR, "competitions.json")
     with open(competitions_path, "r") as comps_file:
         competitions_data = json.load(comps_file)
-
-    # Extract the list of competitions from the dictionary
     listOfCompetitions = competitions_data.get("competitions", [])
-
-    # Ensure that we have loaded a list of competitions
     if not listOfCompetitions:
         raise ValueError("Competitions data is empty or invalid.")
-
     return listOfCompetitions
-
 
 app = Flask(__name__)
 app.secret_key = "something_special"  # Change for security in production
@@ -53,71 +32,42 @@ app.secret_key = "something_special"  # Change for security in production
 competitions = loadCompetitions()
 clubs = loadClubs()
 
-
 # Home route
 @app.route("/")
 def index():
-    """
-    Route for the home page.
-
-    Returns:
-        Rendered template for the home page.
-    """
     return render_template("index.html")
-
 
 # Summary route to display club details
 @app.route("/showSummary", methods=["POST"])
 def showSummary():
-    """
-    Route to show the summary of the club based on the provided email/Secretary.
+    global clubs
+    global competitions
 
-    Returns:
-        Rendered template of the welcome page if the club is found, or redirects to the home page if not.
-    """
-    # Load the clubs and competitions from the JSON files
-    clubs = loadClubs()
-    competitions = loadCompetitions()
-
-    # Retrieve email from the request form
     email = request.form.get("email")
 
     if not email:
         flash("Email field is required.")
         return redirect(url_for("index"))
 
-    # Find the club based on the email provided in the form
     club = next((club for club in clubs if club["email"] == email), None)
 
     if club:
-        # If the club is found, log them in and display the welcome page
         session["logged_in"] = True
-        session["club"] = club["name"]  # Alternatively, you can store the whole club
-
-        # Ensure competitions data is passed to the template
+        session["club"] = club["name"]
         return render_template("welcome.html", club=club, competitions=competitions)
     else:
-        # If no club is found, flash an error and redirect to the home page
         flash("Email not found. Please try again.")
         return redirect(url_for("index"))
-
 
 # Booking route
 @app.route("/book/<competition>/<club>")
 def book(competition, club):
-    """
-    Route for booking a competition spot by the club.
-
-    Args:
-        competition (str): Name of the competition.
-        club (str): Name of the club.
-
-    Returns:
-        Rendered booking page if valid, otherwise redirects to home.
-    """
     if not session.get("logged_in"):
         flash("You must be logged in to book.")
         return redirect(url_for("index"))
+
+    global clubs
+    global competitions
 
     competition = competition.replace("_", " ")
     club = club.replace("_", " ")
@@ -133,25 +83,22 @@ def book(competition, club):
         flash("Club or competition not found.")
         return redirect(url_for("index"))
 
-
 # Purchase places route
 @app.route("/purchasePlaces", methods=["POST"])
 def purchasePlaces():
-    # Load data within the function to avoid using global state
-    clubs = loadClubs()
-    competitions = loadCompetitions()
+    global clubs
+    global competitions
 
     competition_name = request.form["competition"].replace("_", " ")
     club_name = request.form["club"]
 
-    # Find the competition and club
     competition = next((c for c in competitions if c["name"] == competition_name), None)
     club = next((c for c in clubs if c["name"] == club_name), None)
 
     if not competition or not club:
         flash("Competition or club not found.")
         return redirect(url_for("index"))
-    
+
     try:
         spots_requested = int(request.form["places"])
         if spots_requested <= 0:
@@ -166,48 +113,29 @@ def purchasePlaces():
     if booking_result == "Booking successful":
         updateCompetitions(competitions)
         updateClubs(clubs)
-        flash("Great - booking complete!")
+        flash("Great-booking complete!")
     else:
         flash(booking_result)
 
     return render_template("welcome.html", club=club, competitions=competitions)
 
-
-
 # Update the clubs JSON file
-def updateClubs():
-    """
-    Update the 'clubs.json' file with the current state of clubs.
-    """
-    clubs_path = os.path.join(BASE_DIR, "clubs.json")
-    with open(clubs_path, "w") as c:
-        json.dump(clubs, c, indent=4)
-
+def updateClubs(clubs):
+    if not app.testing:
+        clubs_path = os.path.join(BASE_DIR, "clubs.json")
+        with open(clubs_path, "w") as c:
+            json.dump({"clubs": clubs}, c, indent=4)
 
 # Update the competitions JSON file
-def updateCompetitions():
-    """
-    Update the 'competitions.json' file with the current state of competitions.
-    """
-    competitions_path = os.path.join(BASE_DIR, "competitions.json")
-    with open(competitions_path, "w") as comps_file:
-        portalocker.lock(comps_file, portalocker.LOCK_EX)  # Exclusive lock for writing
-        json.dump({"competitions": competitions}, comps_file, indent=4)
-
+def updateCompetitions(competitions):
+    if not app.testing:
+        competitions_path = os.path.join(BASE_DIR, "competitions.json")
+        with open(competitions_path, "w") as comps_file:
+            portalocker.lock(comps_file, portalocker.LOCK_EX)  # Exclusive lock for writing
+            json.dump({"competitions": competitions}, comps_file, indent=4)
 
 # Helper function to book spots
 def book_spot(user, competition, spots_requested):
-    """
-    Helper function to handle spot booking logic for a user in a competition.
-
-    Args:
-        user (dict): The club attempting to book spots.
-        competition (dict): The competition where spots are being booked.
-        spots_requested (int): The number of spots requested.
-
-    Returns:
-        str: Result of the booking attempt.
-    """
     try:
         spots_requested = int(spots_requested)
     except ValueError:
@@ -219,43 +147,34 @@ def book_spot(user, competition, spots_requested):
     if spots_requested > 12:
         return "Cannot book more than 12 spots"
 
-    if competition["available_spots"] < spots_requested:
+    try:
+        available_places = int(competition["numberOfPlaces"])
+    except (ValueError, KeyError):
+        return "Invalid competition data"
+
+    if available_places < spots_requested:
         return "Not enough available spots"
 
-    if user["points"] < spots_requested:
+    if int(user["points"]) < spots_requested:
         return "Not enough points"
 
     # Deduct points and reduce available spots if all checks passed
-    user["points"] -= spots_requested
-    competition["available_spots"] -= spots_requested
+    user["points"] = str(int(user["points"]) - spots_requested)
+    competition["numberOfPlaces"] = str(available_places - spots_requested)
 
     return "Booking successful"
-
 
 # Route to display club points
 @app.route("/points")
 def displayPoints():
-    """
-    Route to display the points of all clubs.
-
-    Returns:
-        Rendered template for the points page showing all clubs.
-    """
+    global clubs
     return render_template("points.html", clubs=clubs)
-
 
 # Logout route
 @app.route("/logout")
 def logout():
-    """
-    Route to handle user logout and session clearance.
-
-    Returns:
-        Redirect to the home page after logging out.
-    """
     session.clear()
     return redirect(url_for("index"))
-
 
 if __name__ == "__main__":
     app.run(debug=True)

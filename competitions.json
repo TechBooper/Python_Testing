@@ -2,18 +2,13 @@
     "competitions": [
         {
             "name": "Spring Festival",
-            "date": "2020-03-27 10:00:00",
-            "numberOfPlaces": 25,
-            "available_spots": 22,
-            "bookings": {
-                "Simply Lift": 0
-            }
+            "date": "2025-03-27 10:00:00",
+            "numberOfPlaces": "17"
         },
         {
             "name": "Fall Classic",
-            "date": "2020-10-22 13:30:00",
-            "numberOfPlaces": 13,
-            "available_spots": 100
+            "date": "2025-10-22 13:30:00",
+            "numberOfPlaces": "13"
         }
     ]
 }
