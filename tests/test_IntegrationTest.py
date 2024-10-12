@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import server
 from server import app
 
-class FunctionalTestCase(unittest.TestCase):
+class IntegrationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.client = app.test_client()
