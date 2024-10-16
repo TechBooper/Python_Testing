@@ -3,34 +3,132 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Summary | GUDLFT Registration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        h2 {
+            color: #4CAF50;
+        }
+
+        h3 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        a {
+            color: #4CAF50;
+            text-decoration: none;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: #ddd;
+        }
+
+        .message-list ul {
+            background-color: #ffeb3b;
+            border: 1px solid #ffd700;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .message-list li {
+            color: #555;
+        }
+
+        .points {
+            font-size: 18px;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .competition-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .competition-item .details {
+            flex-grow: 1;
+        }
+
+        .competition-item a {
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .competition-item a:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
-        <h2>Welcome, {{club['email']}} </h2><a href="{{url_for('logout')}}">Logout</a>
+    <h2>Welcome, {{club['email']}} </h2>
+    <a href="{{url_for('logout')}}">Logout</a>
 
-    {% with messages = get_flashed_messages()%}
-    {% if messages %}
+    <div class="message-list">
+        {% with messages = get_flashed_messages()%}
+        {% if messages %}
         <ul>
-       {% for message in messages %}
+            {% for message in messages %}
             <li>{{message}}</li>
-        {% endfor %}
-       </ul>
-    {% endif%}
-    Points available: {{club['points']}}
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="points">
+        Points available: {{club['points']}}
+    </div>
+
     <h3>Competitions:</h3>
     <ul>
-        {% for comp in competitions%}
-        <li>
-            {{comp['name']}}<br />
-            Date: {{comp['date']}}</br>
-            Number of Places: {{comp['numberOfPlaces']}}
-            {%if comp['numberOfPlaces']|int >0%}
+        {% for comp in competitions %}
+        <li class="competition-item">
+            <div class="details">
+                <strong>{{comp['name']}}</strong><br />
+                Date: {{comp['date']}}<br />
+                Number of Places: {{comp['numberOfPlaces']}}
+            </div>
+            {% if comp['numberOfPlaces']|int > 0 %}
             <a href="{{ url_for('book',competition=comp['name'],club=club['name']) }}">Book Places</a>
-            {%endif%}
+            {% endif %}
         </li>
         <hr />
         {% endfor %}
     </ul>
-    {%endwith%}
-
 </body>
 </html>
