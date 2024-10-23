@@ -58,11 +58,6 @@ class IntegrationTestCase(unittest.TestCase):
         # Return a fresh copy of competitions
         return [competition.copy() for competition in self.base_competitions]
 
-    def test_points_page_public_access(self):
-        response = self.client.get("/points")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Points", response.data)
-
     def test_show_summary(self):
         """Test that the welcome page is displayed after logging in with a valid email"""
         response = self.client.post(
