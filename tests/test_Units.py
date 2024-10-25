@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from server import book_spot
 from unittest.mock import patch
 
+
 class BookingTestCase(unittest.TestCase):
 
     def test_successful_booking(self):
@@ -88,6 +89,7 @@ class BookingTestCase(unittest.TestCase):
         self.assertEqual(result, "Not enough points")
         self.assertEqual(user["points"], "5")  # Points should not change
         self.assertEqual(competition["numberOfPlaces"], "10")  # Spots should not change
+
 
 if __name__ == "__main__":
     unittest.main()

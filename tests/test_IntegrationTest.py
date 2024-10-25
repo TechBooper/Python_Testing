@@ -8,6 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import server
 from server import app
 
+
 class IntegrationTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -19,31 +20,23 @@ class IntegrationTestCase(unittest.TestCase):
             {
                 "name": "Simply Lift",
                 "email": "john@simplylift.co",
-                "points": "15"  # Use string for consistency with JSON data
+                "points": "15",  # Use string for consistency with JSON data
             },
-            {
-                "name": "Iron Temple",
-                "email": "admin@irontemple.com",
-                "points": "4"
-            },
-            {
-                "name": "She Lifts",
-                "email": "kate@shelifts.co.uk",
-                "points": "12"
-            }
+            {"name": "Iron Temple", "email": "admin@irontemple.com", "points": "4"},
+            {"name": "She Lifts", "email": "kate@shelifts.co.uk", "points": "12"},
         ]
 
         self.base_competitions = [
             {
                 "name": "Spring Festival",
                 "date": "2025-03-27 10:00:00",
-                "numberOfPlaces": "20"  # Use string for consistency with JSON data
+                "numberOfPlaces": "20",  # Use string for consistency with JSON data
             },
             {
                 "name": "Fall Classic",
                 "date": "2025-10-22 13:30:00",
-                "numberOfPlaces": "13"
-            }
+                "numberOfPlaces": "13",
+            },
         ]
 
         # Override the server's data
@@ -61,7 +54,9 @@ class IntegrationTestCase(unittest.TestCase):
     def test_show_summary(self):
         """Test that the welcome page is displayed after logging in with a valid email"""
         response = self.client.post(
-            "/showSummary", data={"email": self.base_clubs[0]["email"]}, follow_redirects=True
+            "/showSummary",
+            data={"email": self.base_clubs[0]["email"]},
+            follow_redirects=True,
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Welcome", response.data)
@@ -92,7 +87,7 @@ class IntegrationTestCase(unittest.TestCase):
                 "club": self.base_clubs[0]["name"],
                 "places": "3",  # Sufficient spots and points
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
 
         # Validate that the booking is successful
@@ -114,7 +109,7 @@ class IntegrationTestCase(unittest.TestCase):
                 "club": self.base_clubs[0]["name"],
                 "places": "5",  # More spots than the club has points for
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
 
         # Validate that the correct message is displayed
@@ -133,7 +128,7 @@ class IntegrationTestCase(unittest.TestCase):
                 "club": self.base_clubs[0]["name"],
                 "places": "13",  # Exceeds the 12 spots limit
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
 
         # Validate that the correct message is shown
@@ -141,7 +136,9 @@ class IntegrationTestCase(unittest.TestCase):
 
     def test_invalid_email_login(self):
         """Test login attempt with an invalid email that is not in the club list."""
-        invalid_email = "invalidemail@example.com"  # This email should not exist in clubs.json
+        invalid_email = (
+            "invalidemail@example.com"  # This email should not exist in clubs.json
+        )
 
         # Post the form with the invalid email and follow the redirect
         response = self.client.post(
@@ -178,7 +175,7 @@ class IntegrationTestCase(unittest.TestCase):
                 "club": self.base_clubs[0]["name"],
                 "places": "abc",  # Non-numeric input
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
 
         self.assertIn(b"Invalid input for number of spots", response.data)
@@ -199,7 +196,7 @@ class IntegrationTestCase(unittest.TestCase):
                 "club": self.base_clubs[0]["name"],
                 "places": "10",  # Requesting 10 spots, only 5 available
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
 
         self.assertIn(b"Not enough available spots", response.data)
@@ -215,7 +212,7 @@ class IntegrationTestCase(unittest.TestCase):
                 "club": self.base_clubs[0]["name"],
                 "places": "5",
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
 
         # Visit points page
@@ -237,10 +234,13 @@ class IntegrationTestCase(unittest.TestCase):
                 "club": self.base_clubs[0]["name"],
                 "places": "-3",  # Negative number of places
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
 
-        self.assertIn(b"Number of spots requested must be greater than zero", response.data)
+        self.assertIn(
+            b"Number of spots requested must be greater than zero", response.data
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

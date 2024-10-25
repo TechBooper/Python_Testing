@@ -7,15 +7,17 @@ from datetime import datetime
 # Get the current directory of the script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
 # Load clubs and competitions from JSON files
 def loadClubs():
     clubs_path = os.path.join(BASE_DIR, "clubs.json")
     with open(clubs_path) as c:
         data = json.load(c)
-        listOfClubs = data.get('clubs', [])
+        listOfClubs = data.get("clubs", [])
         if not listOfClubs:
             raise ValueError("Clubs data is empty or invalid.")
     return listOfClubs
+
 
 def loadCompetitions():
     competitions_path = os.path.join(BASE_DIR, "competitions.json")
@@ -26,6 +28,7 @@ def loadCompetitions():
         raise ValueError("Competitions data is empty or invalid.")
     return listOfCompetitions
 
+
 app = Flask(__name__)
 app.secret_key = "something_special"  # Change for security in production
 
@@ -33,10 +36,12 @@ app.secret_key = "something_special"  # Change for security in production
 competitions = loadCompetitions()
 clubs = loadClubs()
 
+
 # Home route
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 # Summary route to display club details
 @app.route("/showSummary", methods=["POST"])
@@ -59,6 +64,7 @@ def showSummary():
     else:
         flash("Email not found. Please try again.")
         return redirect(url_for("index"))
+
 
 # Booking route
 @app.route("/book/<competition>/<club>")
@@ -83,6 +89,7 @@ def book(competition, club):
     else:
         flash("Club or competition not found.")
         return redirect(url_for("index"))
+
 
 # Purchase places route
 @app.route("/purchasePlaces", methods=["POST"])
@@ -120,6 +127,7 @@ def purchasePlaces():
 
     return render_template("welcome.html", club=club, competitions=competitions)
 
+
 # Update the clubs JSON file
 def updateClubs(clubs):
     if not app.testing:
@@ -127,16 +135,21 @@ def updateClubs(clubs):
         with open(clubs_path, "w") as c:
             json.dump({"clubs": clubs}, c, indent=4)
 
+
 # Update the competitions JSON file
 def updateCompetitions(competitions):
     if not app.testing:
         competitions_path = os.path.join(BASE_DIR, "competitions.json")
         with open(competitions_path, "w") as comps_file:
-            portalocker.lock(comps_file, portalocker.LOCK_EX)  # Exclusive lock for writing
+            portalocker.lock(
+                comps_file, portalocker.LOCK_EX
+            )  # Exclusive lock for writing
             json.dump({"competitions": competitions}, comps_file, indent=4)
+
 
 # Helper function to book spots
 from datetime import datetime
+
 
 def book_spot(user, competition, spots_requested):
     # Validate spots_requested input
@@ -144,49 +157,54 @@ def book_spot(user, competition, spots_requested):
         spots_requested = int(spots_requested)
     except ValueError:
         return "Invalid input for spots requested"
-    
+
     if spots_requested <= 0:
         return "Number of spots requested must be greater than zero"
-    
+
     if spots_requested > 12:
         return "Cannot book more than 12 spots"
-    
+
     # Validate competition exists and has required fields
-    if not competition or "numberOfPlaces" not in competition or "date" not in competition:
+    if (
+        not competition
+        or "numberOfPlaces" not in competition
+        or "date" not in competition
+    ):
         return "Invalid competition data"
-        
+
     # Validate and parse competition data
     try:
         available_places = int(competition["numberOfPlaces"])
     except ValueError:
         return "Invalid number of places"
 
-    # Validate date format to catch past competitions booking attempts    
+    # Validate date format to catch past competitions booking attempts
     try:
         competition_date = datetime.strptime(competition["date"], "%Y-%m-%d %H:%M:%S")
     except ValueError:
         return "Invalid competition date"
-    
+
     # Catch past competitions booking attempts
     if competition_date < datetime.now():
         return "Cannot book spots for past competitions"
-    
+
     if available_places < spots_requested:
         return "Not enough available spots"
-    
+
     try:
         user_points = int(user["points"])
     except (ValueError, KeyError):
         return "Invalid user data"
-        
+
     if user_points < spots_requested:
         return f"Not enough points, you have {user_points} left"
-    
+
     # Deduct points and reduce available spots if all checks passed
     user["points"] = str(user_points - spots_requested)
     competition["numberOfPlaces"] = str(available_places - spots_requested)
-    
+
     return "Booking successful"
+
 
 # Route to display club points
 @app.route("/points")
@@ -194,11 +212,13 @@ def displayPoints():
     global clubs
     return render_template("points.html", clubs=clubs)
 
+
 # Logout route
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("index"))
+
 
 if __name__ == "__main__":
     app.run(debug=True)
