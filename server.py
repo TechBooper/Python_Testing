@@ -2,6 +2,7 @@ import json
 from flask import Flask, render_template, request, redirect, flash, url_for, session
 import portalocker
 import os
+from datetime import datetime
 
 # Get the current directory of the script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -135,33 +136,56 @@ def updateCompetitions(competitions):
             json.dump({"competitions": competitions}, comps_file, indent=4)
 
 # Helper function to book spots
+from datetime import datetime
+
 def book_spot(user, competition, spots_requested):
+    # Validate spots_requested input
     try:
         spots_requested = int(spots_requested)
     except ValueError:
         return "Invalid input for spots requested"
-
+    
     if spots_requested <= 0:
         return "Number of spots requested must be greater than zero"
-
+    
     if spots_requested > 12:
         return "Cannot book more than 12 spots"
-
+    
+    # Validate competition exists and has required fields
+    if not competition or "numberOfPlaces" not in competition or "date" not in competition:
+        return "Invalid competition data"
+        
+    # Validate and parse competition data
     try:
         available_places = int(competition["numberOfPlaces"])
-    except (ValueError, KeyError):
-        return "Invalid competition data"
+    except ValueError:
+        return "Invalid number of places"
 
+    # Validate date format to catch past competitions booking attempts    
+    try:
+        competition_date = datetime.strptime(competition["date"], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return "Invalid competition date"
+    
+    # Catch past competitions booking attempts
+    if competition_date < datetime.now():
+        return "Cannot book spots for past competitions"
+    
     if available_places < spots_requested:
         return "Not enough available spots"
-
-    if int(user["points"]) < spots_requested:
-        return "Not enough points"
-
+    
+    try:
+        user_points = int(user["points"])
+    except (ValueError, KeyError):
+        return "Invalid user data"
+        
+    if user_points < spots_requested:
+        return f"Not enough points, you have {user_points} left"
+    
     # Deduct points and reduce available spots if all checks passed
-    user["points"] = str(int(user["points"]) - spots_requested)
+    user["points"] = str(user_points - spots_requested)
     competition["numberOfPlaces"] = str(available_places - spots_requested)
-
+    
     return "Booking successful"
 
 # Route to display club points
